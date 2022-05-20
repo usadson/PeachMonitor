@@ -5,19 +5,26 @@ import socket
 import sys
 import time
 
+SERVER_SOCKET = ("127.0.0.1", 1312)
+TIMEOUT = 0.5
+
 isWindows = platform.system() == "Windows"
 
 if len(sys.argv) == 1:
     print("Wachtwoord Vereist")
 if len(sys.argv) == 2:
     print("Identifier Vereist")
+s = None
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def connect():
+    global s
+    print("Verbinden met " + SERVER_SOCKET[0] + " op poort " + str(SERVER_SOCKET[1]))
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-s.connect(("127.0.0.1", 1312))
+    s.connect(SERVER_SOCKET)
 
-s.sendall(bytes("IDENTIFY {identifier}\n".format(identifier = sys.argv[2]), "utf-8"))
-s.sendall(bytes("LOGIN {password}\n".format(password = sys.argv[1]), "utf-8"))
+    s.sendall(bytes("IDENTIFY {identifier}\n".format(identifier = sys.argv[2]), "utf-8"))
+    s.sendall(bytes("LOGIN {password}\n".format(password = sys.argv[1]), "utf-8"))
 
 def read_line(sock):
     chars = []
@@ -31,30 +38,45 @@ def read_line(sock):
 psutil.cpu_percent()
 
 
-while True:
+def send_data():
+    global s
+    while True:
 #    line = read_line(s)
 #    print(line)
 #    if line == '':
 #        break
-    mem = psutil.virtual_memory()
-    disk = psutil.disk_usage("C:\\" if isWindows else "/")
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage("C:\\" if isWindows else "/")
 
-    #heartbeat = str(psutil.cpu_percent() / 100) + " " + str(mem['used'] / mem[
-    heartbeat = {
-        "cpu": {
-            "percent": int(psutil.cpu_percent() * 10)
-        },
-        "memory": {
-            "used": mem.used,
-            "total": mem.total
-        },
-        "disk": {
-            "used": disk.used,
-            "total": disk.total
+        #heartbeat = str(psutil.cpu_percent() / 100) + " " + str(mem['used'] / mem[
+        heartbeat = {
+            "cpu": {
+                "percent": int(psutil.cpu_percent() * 10)
+            },
+            "memory": {
+                "used": mem.used,
+                "total": mem.total
+            },
+            "disk": {
+                "used": disk.used,
+                "total": disk.total
+            }
         }
-    }
-    s.send(bytes("HEARTBEAT " + json.dumps(heartbeat) + "\n", 'UTF-8'))
+        s.send(bytes("HEARTBEAT " + json.dumps(heartbeat) + "\n", 'UTF-8'))
 
-    time.sleep(0.5)
+        time.sleep(TIMEOUT)
 
 
+while True:
+    try:
+        connect()
+        print("Verbonden. Ik zal nu elke " + str(TIMEOUT) + " seconden HEARTBEATs sturen")
+        send_data()
+    except KeyboardInterrupt:
+        break
+    except BrokenPipeError:
+        print("Verbinding verloren.")
+        continue
+    except ConnectionRefusedError:
+        print("Geen verbinding mogelijk. Ik probeer het over 1 seconde opnieuw...")
+        time.sleep(1)
