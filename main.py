@@ -1,3 +1,4 @@
+import itertools
 import json
 import platform
 import psutil
@@ -37,6 +38,15 @@ def read_line(sock):
 # Warm up psutil
 psutil.cpu_percent()
 
+def count_iter_items(iterable):
+    counter = itertools.count()
+    collections.deque(itertools.izip(iterable, counter), maxlen=0)
+    return next(counter)
+
+def count_windows_services():
+    if not psutil.WINDOWS:
+        return 0
+    return count_iter_items(psutil.win_service_iter())
 
 def send_data():
     global s
@@ -47,20 +57,27 @@ def send_data():
 #        break
         mem = psutil.virtual_memory()
         disk = psutil.disk_usage("C:\\" if isWindows else "/")
+        io = psutil.net_io_counters()
 
         #heartbeat = str(psutil.cpu_percent() / 100) + " " + str(mem['used'] / mem[
         heartbeat = {
             "cpu": {
-                "percent": int(psutil.cpu_percent() * 10)
+                "percent": int(psutil.cpu_percent() * 10),
+                "processes": len(psutil.pids()),
+                "windows-services": count_windows_services(),
             },
             "memory": {
                 "used": mem.used,
-                "total": mem.total
+                "total": mem.total,
             },
             "disk": {
                 "used": disk.used,
-                "total": disk.total
-            }
+                "total": disk.total,
+            },
+            "io": {
+                "bytes-sent": io.bytes_sent,
+                "bytes-received": io.bytes_recv,
+            },
         }
         s.send(bytes("HEARTBEAT " + json.dumps(heartbeat) + "\n", 'UTF-8'))
 
