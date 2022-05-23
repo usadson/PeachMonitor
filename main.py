@@ -27,6 +27,10 @@ def connect():
 
     s.sendall(bytes("IDENTIFY {identifier}\n".format(identifier = sys.argv[2]), "utf-8"))
     s.sendall(bytes("LOGIN {password}\n".format(password = sys.argv[1]), "utf-8"))
+    l = read_line(s)
+    print(l)
+    if l != "ACCESS GRANTED":
+        quit()
 
 def read_line(sock):
     chars = []
