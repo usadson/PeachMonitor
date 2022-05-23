@@ -41,7 +41,7 @@ psutil.cpu_percent()
 
 def count_iter_items(iterable):
     counter = itertools.count()
-    collections.deque(itertools.izip(iterable, counter), maxlen=0)
+    collections.deque(zip(iterable, counter), maxlen=0)
     return next(counter)
 
 def count_windows_services():
