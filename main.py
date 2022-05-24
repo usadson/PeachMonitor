@@ -7,7 +7,6 @@ import socket
 import sys
 import time
 
-SERVER_SOCKET = ("127.0.0.1", 1312)
 TIMEOUT = 0.5
 
 isWindows = platform.system() == "Windows"
@@ -16,7 +15,10 @@ if len(sys.argv) == 1:
     print("Wachtwoord Vereist")
 if len(sys.argv) == 2:
     print("Identifier Vereist")
+if len(sys.argv) == 3:
+    print("IP-adres vereist")
 s = None
+SERVER_SOCKET = (sys.argv[3], 1312)
 
 def connect():
     global s
@@ -96,7 +98,7 @@ while True:
         send_data()
     except KeyboardInterrupt:
         break
-    except BrokenPipeError:
+    except (BrokenPipeError, ConnectionResetError):
         print("Verbinding verloren.")
         continue
     except ConnectionRefusedError:
